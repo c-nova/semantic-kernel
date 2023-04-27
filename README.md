@@ -1,148 +1,126 @@
-# Semantic Kernel
+# Copilot チャット サンプル アプリケーション
+> このサンプルは教育のみを目的としており、運用環境のデプロイにはお勧めしません。
 
-[![Python package](https://img.shields.io/pypi/v/semantic-kernel)](https://pypi.org/project/semantic-kernel/)
-[![Nuget package](https://img.shields.io/nuget/vpre/Microsoft.SemanticKernel)](https://www.nuget.org/packages/Microsoft.SemanticKernel/)
-[![dotnet](https://github.com/microsoft/semantic-kernel/actions/workflows/dotnet-ci.yml/badge.svg?branch=main)](https://github.com/microsoft/semantic-kernel/actions/workflows/dotnet-ci.yml)
-[![License: MIT](https://img.shields.io/github/license/microsoft/semantic-kernel)](https://github.com/microsoft/semantic-kernel/blob/main/LICENSE)
-[![Discord](https://img.shields.io/discord/1063152441819942922?label=Discord&logo=discord&logoColor=white&color=d82679)](https://aka.ms/SKDiscord)
+# Copilot チャットについて
+このサンプルでは、独自の統合された大規模言語モデルのチャット copilot を作成できます。
+これは、コマンド メッセージ、ユーザーの意図、メモリなどの複数の動的コンポーネントを備えた、強化されたインテリジェンス アプリです。
 
-> ℹ️ **NOTE**: This project is in early alpha and, just like AI, will evolve quickly.
-> We invite you to join us in developing the Semantic Kernel together!
-> Please contribute by
-> using GitHub [Discussions](https://github.com/microsoft/semantic-kernel/discussions),
-> opening GitHub [Issues](https://github.com/microsoft/semantic-kernel/issues/new/choose),
-> sending us [PRs](https://github.com/microsoft/semantic-kernel/pulls),
-> joining our [Discord community](https://aka.ms/SKDiscord).
+チャットのプロンプトと応答は、ユーザーとアプリケーション間の会話が進むにつれて進化します。
+このチャットエクスペリエンスは、セマンティックカーネルと、各応答を構築するために連携する多数の関数を含む Copilot チャットスキルで調整されます。
 
-**Semantic Kernel (SK)** is a lightweight SDK enabling integration of AI Large
-Language Models (LLMs) with conventional programming languages. The SK extensible
-programming model combines natural language **semantic functions**, traditional
-code **native functions**, and **embeddings-based memory** unlocking new potential
-and adding value to applications with AI.
+![UI Sample](images/UI-Sample.png)
 
-SK supports
-[prompt templating](docs/PROMPT_TEMPLATE_LANGUAGE.md), function
-chaining,
-[vectorized memory](docs/EMBEDDINGS.md), and
-[intelligent planning](docs/PLANNER.md)
-capabilities out of the box.
+# 環境を構成する
+開始する前に、次の要件が満たされていることを確認してください:
+- [.NET 6.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+- [Node.js](https://nodejs.org/en/download)
+- [Yarn](https://classic.yarnpkg.com/lang/en/docs/install)
+- [Visual Studio Code](https://code.visualstudio.com/Download) **(オプション)** 
+- [Azure OpenAI](https://aka.ms/oai/access) リソースまたは [OpenAI](https://platform.openai.com)のアカウント。
 
-![image](https://user-images.githubusercontent.com/371009/221739773-cf43522f-c1e4-42f2-b73d-5ba84e21febb.png)
+# WebApi バックエンド サーバーの起動
+このサンプルでは、フロントエンド Web UI とバックエンド API サーバーの 2 つのアプリケーションを使用します。
+まず、バックエンド API サーバーを設定して確認しましょう。
 
-Semantic Kernel is designed to support and encapsulate several design patterns from the
-latest in AI research, such that developers can infuse their applications with complex
-[skills](docs/SKILLS.md) like [prompt](docs/PROMPT_TEMPLATE_LANGUAGE.md) chaining,
-recursive reasoning, summarization, zero/few-shot learning, contextual memory,
-long-term memory, [embeddings](docs/EMBEDDINGS.md), semantic indexing, [planning](docs/PLANNER.md),
-and accessing external knowledge stores as well as your own data.
+1. ローカルホスト開発者証明書を生成して信頼します。ターミナルを開き、次のコマンドを実行します:
+   - Windows および Mac の場合は、`dotnet dev-certs https --trust` を実行し、この証明書をインストールするかどうかを尋ねられたら `Yes` を選択します。
+   - Linux の場合は、`dotnet dev-certs https` を実行します。
+   > **注:** 開発者証明書をインストールした後、Web ブラウザーのすべてのインスタンスを閉じることをお勧めします。
 
-By joining the SK community, you can build AI-first apps faster and have a front-row
-peek at how the SDK is being built. SK has been released as open-source so that more
-pioneering developers can join us in crafting the future of this landmark moment
-in the history of computing.
+2. `samples/apps/copilot-chat-app/webapi` に移動し、`appsettings.json` を開きます。
+   - `Completion` および `Embedding` 構成セクションを更新します:
+     - `AIService` を、使用する AI サービス (`AzureOpenAI` または `OpenAI` など) に更新します。
+     - Azure OpenAI を使用している場合は、エンドポイントを Azure OpenAI リソースのエンドポイント アドレスに更新します (例: `http://contoso.openai.azure.com`)。
+        > OpenAI を使用している場合、このプロパティは無視されます。
+     - webapi プロジェクト ディレクトリでターミナルを開き、`dotnet user-secrets` を使用して、Azure OpenAI キーを設定します。
+       ```bash
+       cd semantic-kernel/samples/apps/copilot-chat-app/webapi
+       dotnet user-secrets set "Completion:Key" "MY_AZUREOPENAI_OR_OPENAI_KEY"
+       dotnet user-secrets set "Embedding:Key" "MY_AZUREOPENAI_OR_OPENAI_KEY"
+       ```
+     - `DeploymentOrModelID` を、使用する Azure OpenAI デプロイまたは OpenAI モデルに更新します。
+       - `Completion` のために、CopilotChat は gpt-3.5-turbo や gpt-4 などのチャット補完モデルに最適化されています。
+         > **重要:** gpt-3.5-turbo は通常、Azure OpenAI では "gpt-35-turbo" (ピリオドなし)、OpenAI では "gpt-3.5-turbo" (ピリオドあり) とラベル付けされます。
+       - `Embedding` には、埋め込みを生成するための `text-embedding-ada-002` で十分であり、費用対効果が高いです。
+   
+   - **(オプション)** チャット入力の音声テキスト変換を有効にするには、`AzureSpeech` 構成セクションを更新します。
+     > まだ作成していない場合は、[Azure Speech リソースを作成](https://ms.portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices)する必要があります (詳細については、[./webapi/appsettings.json](webapi/appsettings.json) を参照してください)。
+     - `Region` を、Speech SDK インスタンスに適したリージョンに更新します。
+     - webapi プロジェクト ディレクトリのターミナルを開き、`AzureSpeech:Key` の dotnet のユーザー シークレット値を設定することで、Azure 音声キーを設定します。
+       ```bash
+       dotnet user-secrets set "AzureSpeech:Key" "MY_AZURE_SPEECH_KEY" 
+       ```
 
-## Get Started with Semantic Kernel ⚡
+3. バックエンド API サーバーを構築して実行する
+    1. ターミナルを開き、`samples/apps/copilot-chat-app/webapi` に移動します
+    
+    2. `dotnet build` を実行してプロジェクトをビルドします。
+    
+    3. `dotnet run` を実行してサーバーを起動します。
+    
+    4. バックエンド サーバーが応答していることを確認し、Web ブラウザーを開いて `https://localhost:40443/probe`　に移動します。
+       > probe に初めてアクセスすると、Webサイトの証明書に問題があるという警告が表示される場合があります。
+         受け入れる/続行するオプションを選択します-これは `localhost` でサービスを実行するときに予想されます フロントエンドがバックエンドと通信できるようにする前に、ブラウザが証明書を受け入れる必要がある場合があるため、これを行うことが重要です。
 
-Semantic Kernel is available to explore AI and build apps with C# and Python:
-
-<div style="display:flex;height:30px;padding:5px 0 5px 10px;">
-<img src="https://user-images.githubusercontent.com/371009/230673036-fad1e8e6-5d48-49b1-a9c1-6f9834e0d165.png" style="margin-right:12px" height="30"/>
-<a href="dotnet/README.md">Using Semantic Kernel in C#</a>.
-</div>
-
-<div style="display:flex;height:30px;padding:5px 0 5px 10px;">
-<img src="https://user-images.githubusercontent.com/371009/230673733-7a447d30-b48e-46e1-bd84-2b321c90649e.png" style="margin-right:12px" height="30"/>
-<a href="python/README.md">Using Semantic Kernel in Python</a>.
-</div>
-<br/>
-
-See the [Feature Matrix](FEATURE_MATRIX.md) to see a breakdown of feature parity between C# and Python.
-
-The quickest way to get started with the basics is to get an API key
-(OpenAI or Azure OpenAI)
-and to run one of the C# or Python console applications/scripts:
-
-For C#:
-1. Create a new console app.
-2. Add the semantic kernel nuget `Microsoft.SemanticKernel`.
-3. Copy the code from [here](dotnet/README.md) into the app `Program.cs` file.
-4. Replace the configuration placeholders for API key and other params with your key and settings.
-5. Run with `F5` or `dotnet run`
-
-For Python:
-1. Install the pip package: `python -m pip install semantic-kernel`.
-2. Create a new script e.g. `hello-world.py`.
-3. Store your API key and settings in an `.env` file as described [here](python/README.md).
-4. Copy the code from [here](python/README.md) into the `hello-world.py` script.
-5. Run the python script.
+      > また、Windows Defender ファイアウォールを確認し、必要に応じてアプリがプライベート ネットワークまたはパブリック ネットワーク経由で通信できるようにする必要がある場合もあります。
+ 
+4. フロントエンドアプリケーションを構築して起動する
+   1. また、Azure Active Directory (AAD) アプリケーションの登録も必要です。
+      > アプリケーション登録の作成の詳細については、[こちら](https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app)を参照してください。
+      - プラットフォームの種類として `Single-page application (SPA)` を選択し、Web リダイレクト URI を `https://localhost:3000` に設定します。
+      - このサンプルでサポートされているアカウントの種類として、`任意の組織のディレクトリ内のアカウント と 個人用 Microsoft アカウント` を選択します。
+      - Azure ポータルから `Application (client) ID` をメモしておいてください。後で使用します。
 
 
-## Sample apps ⚡
+   2. ターミナルを開き、`samples/apps/copilot-chat-app/webapp` に移動します `env.example` を新しいファイル `.env` にコピーし、上記で作成した AAD アプリケーション (クライアント) ID で `REACT_APP_AAD_CLIENT_ID` を更新します。例：
+      ```bash
+      REACT_APP_BACKEND_URI=https://localhost:40443/
+      REACT_APP_AAD_CLIENT_ID=00000000-0000-0000-0000-000000000000
+      ```
+   
+   3. フロントエンド アプリケーションをビルドして実行するには
+      ```bash
+      yarn install
+      yarn start
+      ```
+   
+   4. バックエンドとフロントエンドを実行すると、Webブラウザが自動的に起動し、`http://localhost:3000` に移動します
+      > フロントエンド アプリケーションを初めて実行すると、起動に数分ほどかかる場合があります。
+   
+   5. Microsoft の個人アカウントまたは "職場または学校" アカウントでサインインします。
 
-The repository includes some sample applications, with a React frontend and
-a backend web service using Semantic Kernel.
+   6. アプリケーションがあなたのプロフィール情報(例えばあなたの名前)を読み取るための同意許可。
+    
+    エラーや問題が発生した場合は、以下のトラブルシューティングのセクションを参照してください。
 
-Follow the links for more information and instructions about running these apps.
+5. 楽しんでください！
+   > **注:** 各チャット操作は、課金される可能性のあるトークンを使用する Azure OpenAI/OpenAI を呼び出します。
 
-|                                                                         |                                                                                                                                   |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [Simple chat summary](samples/apps/chat-summary-webapp-react/README.md) | Use ready-to-use skills and get those skills into your app easily.                                                                |
-| [Book creator](samples/apps/book-creator-webapp-react/README.md)        | Use planner to deconstruct a complex goal and envision using the planner in your app.                                             |
-| [Authentication and APIs](samples/apps/auth-api-webapp-react/README.md) | Use a basic connector pattern to authenticate and connect to an API and imagine integrating external data into your app's LLM AI. |
-| [GitHub repository Q&A](samples/apps/github-qna-webapp-react/README.md) | Use embeddings and memory to store recent data and allow you to query against it.                                                 |
-| [Copilot Chat Sample App](samples/apps/copilot-chat-app/README.md)      | Build your own chat experience based on Semantic Kernel.                                                                          |
+## トラブルシューティング
+### 1. ローカルホストの SSL 証明書のエラー
+![](images/Cert-Issue.png)
 
-**Requirements:**
+上記のようなエラーメッセージで停止する場合は、ブラウザがフロントエンドアクセスをブロックしている可能性があります
+接続の許可を待っている間にバックエンドに移動します。これを解決するには、次のことを試してください:
 
-- You will need an
-  [Open AI API Key](https://openai.com/api/) or
-  [Azure Open AI service key](https://learn.microsoft.com/azure/cognitive-services/openai/quickstart?pivots=rest-api)
-  to get started.
-- [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local)
-  are required to run the kernel as a local web service, used by the sample web apps.
-- [.NET 6](https://dotnet.microsoft.com/download/dotnet/6.0). If you have .NET 7 installed, Azure Function
-  Tools will still require .NET 6, so we suggest installing both.
-- [Yarn](https://yarnpkg.com/getting-started/install) is used for installing web apps' dependencies.
+1. Web ブラウザーを開き、`https://localhost:40443/probe` に移動して、バックエンド サービスが実行されていることを確認します
+   - 確認メッセージが表示されます:`Semantic Kernel service is up and running`
+2. ブラウザから安全でないWebサイトにアクセスするリスクを確認するように求められた場合は、フロントエンドがバックエンドサーバーへの接続を許可する前に、メッセージを確認する必要があります。
+   - 確認応答、続行、および「Semantic Kernel service is up and running」というメッセージが表示されるまで移動します。
+3. `https://localhost:3000` に移動するか、ページを更新して Copilot チャットアプリケーションを使用します。
 
 
-## Jupyter Notebooks ⚡
+### 2. リポジトリ/フォークを更新した後の構成の問題。
+[PR #470](https://github.com/microsoft/semantic-kernel/pull/470) の時点で、トップレベルの構成キーの一部が更新されました。特に、
+  - `CompletionConfig` は現在は `Completion` に変更されています
+  - `EmbeddingConfig` は現在は `Embedding` に変更されています
+  
+また、`dotnet user-secrets set` が設定されたシークレット セットに使用されるキーを更新する必要がある場合もあります。
 
-For a more hands-on overview, you can also check out the C# and Python Jupyter notebooks, starting
-from here:
-* [Getting Started with C# notebook](samples/notebooks/dotnet/00-getting-started.ipynb)
-* [Getting Started with Python notebook](samples/notebooks/python/00-getting-started.ipynb)
+### 3. テキスト補完モデル (`text-davinci-003` など) を使用した場合の問題
 
-**Requirements:** C# notebooks require [.NET 7](https://dotnet.microsoft.com/download)
-and the VS Code [Polyglot extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.dotnet-interactive-vscode).
+[PR #499](https://github.com/microsoft/semantic-kernel/pull/499) の時点で、Copilot Chat は現在、`gpt-3.5-*` や `gpt-4-*` などのチャット完了モデルのサポートに重点を置いています。 チャット補完をサポートする現在のモデルの完全なリストについては、[OpenAI's model compatiblity](https://platform.openai.com/docs/models/model-endpoint-compatibility)を参照してください。
 
-## Contributing and Community
+## 関連資料
 
-We welcome your contributions and suggestions to SK community! One of the easiest
-ways to participate is to engage in discussions in the GitHub repository.
-Bug reports and fixes are welcome!
-
-For new features, components, or extensions, please open an issue and discuss with
-us before sending a PR. This is to avoid rejection as we might be taking the core
-in a different direction, but also to consider the impact on the larger ecosystem.
-
-To learn more and get started:
-
-- Read the [documentation](https://aka.ms/sk/learn)
-- Learn how to [contribute](https://github.com/microsoft/semantic-kernel/blob/main/CONTRIBUTING.md) to the project
-- Join the [Discord community](https://aka.ms/SKDiscord)
-- Follow the team on our [blog](https://aka.ms/sk/blog)
-
-## Code of Conduct
-
-This project has adopted the
-[Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the
-[Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
-or contact [opencode@microsoft.com](mailto:opencode@microsoft.com)
-with any additional questions or comments.
-
-## License
-
-Copyright (c) Microsoft Corporation. All rights reserved.
-
-Licensed under the [MIT](LICENSE) license.
+1. [Import Document Application](./importdocument/README.md): Import a document to the memory store.

@@ -1,135 +1,126 @@
-# Copilot Chat Sample Application
-> This  sample is for educational purposes only and is not recommended for production deployments.
+# Copilot チャット サンプル アプリケーション
+> このサンプルは教育のみを目的としており、運用環境のデプロイにはお勧めしません。
 
-# About Copilot Chat
-This sample allows you to build your own integrated large language model chat copilot.
-This is an enriched intelligence app, with multiple dynamic components including 
-command messages, user intent, and memories.
+# Copilot チャットについて
+このサンプルでは、独自の統合された大規模言語モデルのチャット copilot を作成できます。
+これは、コマンド メッセージ、ユーザーの意図、メモリなどの複数の動的コンポーネントを備えた、強化されたインテリジェンス アプリです。
 
-The chat prompt and response will evolve as the conversation between the user and the application proceeds. 
-This chat experience is orchestrated with Semantic Kernel and a Copilot Chat skill containing numerous
-functions that work together to construct each response.
+チャットのプロンプトと応答は、ユーザーとアプリケーション間の会話が進むにつれて進化します。
+このチャットエクスペリエンスは、セマンティックカーネルと、各応答を構築するために連携する多数の関数を含む Copilot チャットスキルで調整されます。
 
 ![UI Sample](images/UI-Sample.png)
 
-# Configure your environment
-Before you get started, make sure you have the following requirements in place:
+# 環境を構成する
+開始する前に、次の要件が満たされていることを確認してください:
 - [.NET 6.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
 - [Node.js](https://nodejs.org/en/download)
 - [Yarn](https://classic.yarnpkg.com/lang/en/docs/install)
-- [Visual Studio Code](https://code.visualstudio.com/Download) **(Optional)** 
-- [Azure OpenAI](https://aka.ms/oai/access) resource or an account with [OpenAI](https://platform.openai.com).
+- [Visual Studio Code](https://code.visualstudio.com/Download) **(オプション)** 
+- [Azure OpenAI](https://aka.ms/oai/access) リソースまたは [OpenAI](https://platform.openai.com)のアカウント。
 
-# Start the WebApi Backend Server
-The sample uses two applications, a front-end web UI, and a back-end API server.
-First, let’s set up and verify the back-end API server is running.
+# WebApi バックエンド サーバーの起動
+このサンプルでは、フロントエンド Web UI とバックエンド API サーバーの 2 つのアプリケーションを使用します。
+まず、バックエンド API サーバーを設定して確認しましょう。
 
-1. Generate and trust a localhost developer certificate. Open a terminal and run:
-   - For Windows and Mac run `dotnet dev-certs https --trust` and select `Yes` when asked if you want to install this certificate.
-   - For Linux run `dotnet dev-certs https`
-   > **Note:** It is recommended you close all instances of your web browser after installing the developer certificates.
+1. ローカルホスト開発者証明書を生成して信頼します。ターミナルを開き、次のコマンドを実行します:
+   - Windows および Mac の場合は、`dotnet dev-certs https --trust` を実行し、この証明書をインストールするかどうかを尋ねられたら `Yes` を選択します。
+   - Linux の場合は、`dotnet dev-certs https` を実行します。
+   > **注:** 開発者証明書をインストールした後、Web ブラウザーのすべてのインスタンスを閉じることをお勧めします。
 
-1. Navigate to `samples/apps/copilot-chat-app/webapi` and open `appsettings.json`
-   - Update the `Completion` and `Embedding` configuration sections:
-     - Update `AIService` to the AI service you will be using (i.e., `AzureOpenAI` or `OpenAI`).
-     - If your are using Azure OpenAI, update `Endpoint` to your Azure OpenAI resource Endpoint address (e.g.,  
-       `http://contoso.openai.azure.com`).
-        > If you are using OpenAI, this property will be ignored.
-     - Set your Azure OpenAI key by opening a terminal in the webapi project directory and using `dotnet user-secrets`
+2. `samples/apps/copilot-chat-app/webapi` に移動し、`appsettings.json` を開きます。
+   - `Completion` および `Embedding` 構成セクションを更新します:
+     - `AIService` を、使用する AI サービス (`AzureOpenAI` または `OpenAI` など) に更新します。
+     - Azure OpenAI を使用している場合は、エンドポイントを Azure OpenAI リソースのエンドポイント アドレスに更新します (例: `http://contoso.openai.azure.com`)。
+        > OpenAI を使用している場合、このプロパティは無視されます。
+     - webapi プロジェクト ディレクトリでターミナルを開き、`dotnet user-secrets` を使用して、Azure OpenAI キーを設定します。
        ```bash
        cd semantic-kernel/samples/apps/copilot-chat-app/webapi
        dotnet user-secrets set "Completion:Key" "MY_AZUREOPENAI_OR_OPENAI_KEY"
        dotnet user-secrets set "Embedding:Key" "MY_AZUREOPENAI_OR_OPENAI_KEY"
        ```
-     - Update `DeploymentOrModelID` to the Azure OpenAI deployment or OpenAI models you want to use. 
-       - For `Completion`, CopilotChat is optimized for Chat completion models, such as gpt-3.5-turbo and gpt-4
-         > **Important:** gpt-3.5-turbo is normally labelled as "`gpt-35-turbo`" (no period) in Azure OpenAI and "`gpt-3.5-turbo`" (with a period) in OpenAI.
-       - For `Embedding`, `text-embedding-ada-002` is sufficient and cost-effect for generating embeddings.
+     - `DeploymentOrModelID` を、使用する Azure OpenAI デプロイまたは OpenAI モデルに更新します。
+       - `Completion` のために、CopilotChat は gpt-3.5-turbo や gpt-4 などのチャット補完モデルに最適化されています。
+         > **重要:** gpt-3.5-turbo は通常、Azure OpenAI では "gpt-35-turbo" (ピリオドなし)、OpenAI では "gpt-3.5-turbo" (ピリオドあり) とラベル付けされます。
+       - `Embedding` には、埋め込みを生成するための `text-embedding-ada-002` で十分であり、費用対効果が高いです。
    
-   - **(Optional)** To enable speech-to-text for chat input, update the `AzureSpeech` configuration section:
-     > If you have not already, you will need to [create an Azure Speech resource](https://ms.portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices) 
-       (see [./webapi/appsettings.json](webapi/appsettings.json) for more details).
-     - Update `Region` to whichever region is appropriate for your speech sdk instance.
-     - Set your Azure speech key by opening a terminal in the webapi project directory and setting
-       a dotnet user-secrets value for `AzureSpeech:Key`
+   - **(オプション)** チャット入力の音声テキスト変換を有効にするには、`AzureSpeech` 構成セクションを更新します。
+     > まだ作成していない場合は、[Azure Speech リソースを作成](https://ms.portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices)する必要があります (詳細については、[./webapi/appsettings.json](webapi/appsettings.json) を参照してください)。
+     - `Region` を、Speech SDK インスタンスに適したリージョンに更新します。
+     - webapi プロジェクト ディレクトリのターミナルを開き、`AzureSpeech:Key` の dotnet のユーザー シークレット値を設定することで、Azure 音声キーを設定します。
        ```bash
        dotnet user-secrets set "AzureSpeech:Key" "MY_AZURE_SPEECH_KEY" 
        ```
 
-1. Build and run the back-end API server
-    1. Open a terminal and navigate to `samples/apps/copilot-chat-app/webapi`
+3. バックエンド API サーバーを構築して実行する
+    1. ターミナルを開き、`samples/apps/copilot-chat-app/webapi` に移動します
     
-    1. Run `dotnet build` to build the project.
+    2. `dotnet build` を実行してプロジェクトをビルドします。
     
-    1. Run `dotnet run` to start the server.
+    3. `dotnet run` を実行してサーバーを起動します。
     
-    1. Verify the back-end server is responding, open a web browser and navigate to `https://localhost:40443/probe`
-       > The first time accessing the probe you may get a warning saying that there is a problem with website's certificate. 
-         Select the option to accept/continue - this is expected when running a service on `localhost`
-         It is important to do this, as your browser may need to accept the certificate before allowing the frontend to communicate with the backend.
+    4. バックエンド サーバーが応答していることを確認し、Web ブラウザーを開いて `https://localhost:40443/probe`　に移動します。
+       > probe に初めてアクセスすると、Webサイトの証明書に問題があるという警告が表示される場合があります。
+         受け入れる/続行するオプションを選択します-これは `localhost` でサービスを実行するときに予想されます フロントエンドがバックエンドと通信できるようにする前に、ブラウザが証明書を受け入れる必要がある場合があるため、これを行うことが重要です。
 
-      > You may also need to acknowledge the Windows Defender Firewall, and allow the app to communicate over private or public networks as appropriate.
+      > また、Windows Defender ファイアウォールを確認し、必要に応じてアプリがプライベート ネットワークまたはパブリック ネットワーク経由で通信できるようにする必要がある場合もあります。
  
-1. Build and start the front-end application
-   1. You will also need an Azure Active Directory (AAD) application registration. 
-      > For more details on creating an application registration, go [here](https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
-      - Select `Single-page application (SPA)` as platform type, and set the Web redirect URI to `https://localhost:3000`
-      - Select `Accounts in any organizational directory and personal Microsoft Accounts` as supported account types for this sample.
-      - Make a note of the `Application (client) ID` from the Azure Portal, we will use of it later.
+4. フロントエンドアプリケーションを構築して起動する
+   1. また、Azure Active Directory (AAD) アプリケーションの登録も必要です。
+      > アプリケーション登録の作成の詳細については、[こちら](https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app)を参照してください。
+      - プラットフォームの種類として `Single-page application (SPA)` を選択し、Web リダイレクト URI を `https://localhost:3000` に設定します。
+      - このサンプルでサポートされているアカウントの種類として、`任意の組織のディレクトリ内のアカウント と 個人用 Microsoft アカウント` を選択します。
+      - Azure ポータルから `Application (client) ID` をメモしておいてください。後で使用します。
 
-   1. Open a terminal and navigate to `samples/apps/copilot-chat-app/webapp` Copy `env.example` into a new 
-      file `.env` and update the `REACT_APP_AAD_CLIENT_ID` with the AAD application (Client) ID created above.
-      For example:
+
+   2. ターミナルを開き、`samples/apps/copilot-chat-app/webapp` に移動します `env.example` を新しいファイル `.env` にコピーし、上記で作成した AAD アプリケーション (クライアント) ID で `REACT_APP_AAD_CLIENT_ID` を更新します。例：
       ```bash
       REACT_APP_BACKEND_URI=https://localhost:40443/
       REACT_APP_AAD_CLIENT_ID=00000000-0000-0000-0000-000000000000
       ```
    
-   1. To build and run the front-end application
+   3. フロントエンド アプリケーションをビルドして実行するには
       ```bash
       yarn install
       yarn start
       ```
    
-   1. With the back end and front end running, your web browser should automatically launch and navigate to `http://localhost:3000`
-      > The first time running the front-end application may take a minute or so to start.
+   4. バックエンドとフロントエンドを実行すると、Webブラウザが自動的に起動し、`http://localhost:3000` に移動します
+      > フロントエンド アプリケーションを初めて実行すると、起動に数分ほどかかる場合があります。
    
-   1. Sign in with a Microsoft personal account or a "Work or School" account. 
-   
-   1. Consent permission for the application to read your profile information (i.e., your name).
+   5. Microsoft の個人アカウントまたは "職場または学校" アカウントでサインインします。
+
+   6. アプリケーションがあなたのプロフィール情報(例えばあなたの名前)を読み取るための同意許可。
     
-    If you you experience any errors or issues, consult the troubleshooting section below.
+    エラーや問題が発生した場合は、以下のトラブルシューティングのセクションを参照してください。
 
-1. Have fun! 
-   > **Note:** Each chat interaction will call Azure OpenAI/OpenAI which will use tokens that you may be billed for.
+5. 楽しんでください！
+   > **注:** 各チャット操作は、課金される可能性のあるトークンを使用する Azure OpenAI/OpenAI を呼び出します。
 
-## Troubleshooting
-### 1. Localhost SSL certificate errors
+## トラブルシューティング
+### 1. ローカルホストの SSL 証明書のエラー
 ![](images/Cert-Issue.png)
 
-If you are stopped at an error message similar to the one above, your browser may be blocking the front-end access 
-to the back end while waiting for your permission to connect. To resolve this, try the following:
+上記のようなエラーメッセージで停止する場合は、ブラウザがフロントエンドアクセスをブロックしている可能性があります
+接続の許可を待っている間にバックエンドに移動します。これを解決するには、次のことを試してください:
 
-1. Confirm the backend service is running by opening a web browser, and navigating to `https://localhost:40443/probe`
-   - You should see a confirmation message: `Semantic Kernel service is up and running`
-1. If your browser asks you to acknowledge the risks of visiting an insecurewebsite, you must acknowledge the 
-   message before the front end will be allowed to connect to the back-end server. 
-   - Acknowledge, continue, and navigate until you see the message Semantic Kernel service is up and running
-1. Navigate to `https://localhost:3000` or refresh the page to use the Copilot Chat application.
+1. Web ブラウザーを開き、`https://localhost:40443/probe` に移動して、バックエンド サービスが実行されていることを確認します
+   - 確認メッセージが表示されます:`Semantic Kernel service is up and running`
+2. ブラウザから安全でないWebサイトにアクセスするリスクを確認するように求められた場合は、フロントエンドがバックエンドサーバーへの接続を許可する前に、メッセージを確認する必要があります。
+   - 確認応答、続行、および「Semantic Kernel service is up and running」というメッセージが表示されるまで移動します。
+3. `https://localhost:3000` に移動するか、ページを更新して Copilot チャットアプリケーションを使用します。
 
-### 2. Configuration issues after updating your repo/fork.
-As of [PR #470](https://github.com/microsoft/semantic-kernel/pull/470), we have updated some of the top-level
-configuration keys. Most notably, 
-  - `CompletionConfig` is now `Completion` 
-  - `EmbeddingConfig` is now `Embedding`
+
+### 2. リポジトリ/フォークを更新した後の構成の問題。
+[PR #470](https://github.com/microsoft/semantic-kernel/pull/470) の時点で、トップレベルの構成キーの一部が更新されました。特に、
+  - `CompletionConfig` は現在は `Completion` に変更されています
+  - `EmbeddingConfig` は現在は `Embedding` に変更されています
   
-You may also need to update the keys used for any secrets set with `dotnet user-secrets set` 
+また、`dotnet user-secrets set` が設定されたシークレット セットに使用されるキーを更新する必要がある場合もあります。
 
-### 3. Issues using text completion models, such as `text-davinci-003`
-As of [PR #499](https://github.com/microsoft/semantic-kernel/pull/499), CopilotChat now focuses support on chat completion models, such as `gpt-3.5-*` and `gpt-4-*`
-See [OpenAI's model compatiblity](https://platform.openai.com/docs/models/model-endpoint-compatibility) for
-the complete list of current models supporting chat completions.
+### 3. テキスト補完モデル (`text-davinci-003` など) を使用した場合の問題
 
-## Additional resources
+[PR #499](https://github.com/microsoft/semantic-kernel/pull/499) の時点で、Copilot Chat は現在、`gpt-3.5-*` や `gpt-4-*` などのチャット完了モデルのサポートに重点を置いています。 チャット補完をサポートする現在のモデルの完全なリストについては、[OpenAI's model compatiblity](https://platform.openai.com/docs/models/model-endpoint-compatibility)を参照してください。
+
+## 関連資料
 
 1. [Import Document Application](./importdocument/README.md): Import a document to the memory store.
